@@ -15,7 +15,8 @@
 >
 > ### < MAC, Linux >
 > > -   레포지토리를 복제합니다<br/>
-> > -   터미널에서 video_lecture_auto.py을 실행합니다
+> > -   pip install -u requirements.txt를 실행해서 필요한 모듈/라이브러리를 설치합니다
+> > -   터미널 또는 vscode등의 IDE 에서 video_lecture_auto.py을 실행합니다
 > > -   id, pw를 입력하고, 마지막으로 봤었던 강의의 차수를 입력합니다
 > > -   사이트가 생성되면 각 사이트마다 영상을 클릭해서 영상 시작하기
 > > -   FINISH.<br/>
