@@ -42,7 +42,7 @@ driver = webdriver.Chrome(service=Service(), options=options)
 is_login = False
 
 prompt = """
-### 몇 차시 까지 들으셨나요? 숫자로 입력해 주세요 ###
+[?] 몇 차시 까지 들으셨나요? 숫자로 입력해 주세요
 
 {:<30} -> 1
 {:<27} -> n    (ex. 3차시 까지 봤는데 100%가 아니면 3차시)
@@ -147,6 +147,6 @@ for cnts, study in zip(cnts_id_list[start_idx:], study_id_list[start_idx:]):
     open_keli_page(cnts_id=cnts, study_id=study, crsAplcntId=crsAplcntId)
 
 input("""
-### 동영상 강의를 모두 들으신 후 프로그램을 종료하여 주시기 바랍니다. ###
-< 아무 키나 누르시면 프로그램이 종료 됩니다 >
+[!] 20~30분 후에 새로고침을 하셔서 진행도를 확인하신 후 프로그램을 종료하여 주시기 바랍니다.
+[!] 아무 키나 누르시면 프로그램이 종료 됩니다
 """)
