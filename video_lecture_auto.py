@@ -1,15 +1,13 @@
 import re
-import os
-import sys
 import time
+import getpass
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
 
+
+# 함수
 def extract_crs_aplcnt_id(url: str) -> str | None:
         match = re.search(r'crsAplcntId=([A-Z0-9]+)', url)
         if match:
@@ -27,26 +25,18 @@ def open_keli_page(cnts_id: str, study_id: str, crsAplcntId: str):
         driver.execute_script(f"window.open('{url}', '_blank');")
         
         # 너무 빠른 창 생성 방지를 위한 3초 텀
-        time.sleep(3)
+        time.sleep(2)
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0=ALL, 1=INFO, 2=WARNING, 3=ERROR
 
-sys.stderr = open(os.devnull, 'w')
-
-options = Options()
-options.add_argument('--log-level=3')  # 0=ALL, 1=INFO, 2=WARNING, 3=ERROR
-options.add_experimental_option('excludeSwitches', ['enable-logging'])
-
-driver = webdriver.Chrome(service=Service(), options=options)
-
-is_login = False
-
+# 변수
 prompt = """
 [?] 몇 차시 까지 들으셨나요? 숫자로 입력해 주세요
 
 {:<30} -> 1
 {:<27} -> n    (ex. 3차시 까지 봤는데 100%가 아니면 3차시)
 {:<29} -> n+1  (ex. 4차시 까지 봤는데 100%면 5차시)
+
+("Created TensorFlow Lite XNNPACK delegate for CPU." 이라는 문장이 생겨도 무시하고 숫자를 입력하시면 됩니다)
 
 => """.format(
     "아직 1차시를 안 봤다",
@@ -84,37 +74,40 @@ study_id_list = [
     "CRSLBT00000000044767"
 ]
 
-#input_user_id = extract_crs_aplcnt_id(input("### URL을 복사 붙여넣기 해주세요 ###\n=> "))
+# 코드 시작
+if __name__ == "__main__":
+    # 유저 정보 입력
+    while True:
+        input_user_id = input("id: ")
+        input_user_pw = getpass.getpass("pw: ")
+        
+        driver = webdriver.Chrome()
+        driver.get("https://www.keli.kr/cmmn/login.do")
 
-input_user_id = input("id: ")
-input_user_pw = input("pw: ")
+        wait = WebDriverWait(driver, 10)
 
-driver = webdriver.Chrome()
-driver.get("https://www.keli.kr/cmmn/login.do")
+        # 아이디, 비번 대입 후 로그인 버튼 누르기
+        input_id = wait.until(EC.presence_of_element_located((By.NAME, "id")))
+        input_id.clear()  # 기존 내용 있으면 삭제
+        input_id.send_keys(input_user_id)
 
-wait = WebDriverWait(driver, 10)
+        input_pw = wait.until(EC.presence_of_element_located((By.NAME, "password")))
+        input_pw.clear()
+        input_pw.send_keys(input_user_pw)
 
-# 아이디, 비번 대입 후 로그인 버튼 누르기
-input_id = wait.until(EC.presence_of_element_located((By.NAME, "id")))
-input_id.clear()  # 기존 내용 있으면 삭제
-input_id.send_keys(input_user_id)
+        login_btn = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "enter")))
+        login_btn.click()
 
-input_pw = wait.until(EC.presence_of_element_located((By.NAME, "password")))
-input_pw.clear()
-input_pw.send_keys(input_user_pw)
+        try:
+            WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "user"))
+            )
+            break
+        except:
+            driver.quit()
+            print("로그인 정보가 올바르지 않습니다\n다시 한번 입력해 주세요")
+            continue
 
-login_btn = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "enter")))
-login_btn.click()
-
-try:
-    WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.CLASS_NAME, "user"))
-    )
-    is_login = True
-except TimeoutException:
-    is_login = False
-
-if is_login:
     driver.get("https://www.keli.kr/user/crsAplcnt/selectListUser.do")
 
     wait = WebDriverWait(driver, 10)
@@ -126,8 +119,6 @@ if is_login:
     # 클릭 후 페이지가 바뀔 수도 있으니 잠시 기다림
     time.sleep(2)
 
-    # 4. 강의실 입장 버튼 요소 찾기
-    # a 태그의 onclick 속성에서 crsAplcntId 값을 정규식으로 추출
     btn = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "a.c_btn.sm.blue.l_hg")))
 
     onclick_attr = btn.get_attribute("onclick")
@@ -139,14 +130,20 @@ if is_login:
     else:
         print("crsAplcntId 값을 찾지 못하였습니다")
 
-lesson = int(input(prompt))
+    lesson = int(input(prompt))
 
-start_idx = int(lesson) - 1
+    start_idx = int(lesson) - 1
+    
+    print("""
+[!] 강의 창 생성중입니다.
+[!] 창이 여러개 생성되었다고 창을 닫지 마십시오.""")
 
-for cnts, study in zip(cnts_id_list[start_idx:], study_id_list[start_idx:]):
-    open_keli_page(cnts_id=cnts, study_id=study, crsAplcntId=crsAplcntId)
+    for cnts, study in zip(cnts_id_list[start_idx:], study_id_list[start_idx:]):
+        open_keli_page(cnts_id=cnts, study_id=study, crsAplcntId=crsAplcntId)
 
-input("""
-[!] 20~30분 후에 새로고침을 하셔서 진행도를 확인하신 후 프로그램을 종료하여 주시기 바랍니다.
-[!] 아무 키나 누르시면 프로그램이 종료 됩니다
-""")
+    print("""
+[!] 20~30분 후에 창을 새로고침 하셔서 진행도를 확인하신 후 프로그램을 종료하여 주시기 바랍니다.
+[!] enter를 누르시면 프로그램이 종료 됩니다""")
+    
+    input()
+    driver.quit()
